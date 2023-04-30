@@ -8,9 +8,8 @@ open String;;
 (* ===================== *)
 (* Calcul des fréquences *)
 (* ===================== *)
-
-(* défreqnition des types *)
-(* ==================== *)
+(* définition des types  *)
+(* ===================== *)
 
 (* type freq *)
 type freq = Cfreq of string * int | Ccode of string * string;;
@@ -24,9 +23,8 @@ type tree = Ctree of int * tree * tree | Cleaf of freq | Ctree_vide;;
 (* type list de leafs *)
 type list_tree = Clist_tree of tree * list_tree | Clist_tree_vide;;
 
-(* ==================== *)
-
-(* constructeur et getters de freq *)
+(* ================================ *)
+(* constructeur et getters de freq  *)
 (* ================================ *)
 
 (* création d'un freq constitué d'un motif et de sa fréquence. *)
@@ -51,16 +49,15 @@ let (get_caracter : freq -> string) = function Ccode(caracter, _) ->
 let (get_bit : freq -> string) = function Ccode(_, bit) ->
   bit;;
 
-(* ================================ *)
-
-(* constructeurs et getters des lists *)
+(* =================================== *)
+(* constructeurs et getters des lists  *)
 (* =================================== *)
 
 (* crée une liste vide *)
 let (create_empty_list : unit -> list) = function () -> 
   Clist_vide;;
 
-(* test si notre list est vide *)
+(* test si notre liste est vide *)
 let (is_empty : list -> bool) = function list ->
   list = create_empty_list();;
 
@@ -76,26 +73,24 @@ let (get_first_of_list : list -> freq) = function Clist(freq, _) ->
 let (get_rest_list : list -> list) = function Clist(_, list) -> 
   list | _ -> failwith "get_rest_list : Please check again";;
 
-(* =================================== *)
-
-(* getters : chain de caractères *)
+(* ============================== *)
+(* getters : chaine de caractères *)
 (* ============================== *)
 
 (* test si une chain est vide *)
 let (chain_is_empty : string -> bool) = function ch ->
   (ch = "");;
 
-(* renvoie la premotifère letter d'une chain de caractères *)
+(* renvoie la premotifère letter d'une chaine de caractères *)
 let (chain_freqrst : string -> string) = function ch ->
   sub ch 0 1;;
 
-(* renvoie la chain de caractère passée en paramètre privée de sa premotifère letter *)
+(* renvoie la chaine de caractère passée en paramètre privée de sa premotifère letter *)
 let (chain_rest : string -> string) = function ch ->
   sub ch 1 ((length ch) - 1);;
 
-(* ============================== *)
-
-(* constructeurs sur les trees *)
+(* ============================= *)
+(* constructeurs sur les arbres *)
 (* ============================ *)
 
 let (create_tree : int -> tree -> tree -> tree) = function racine -> function left_child -> function right_child ->
@@ -107,9 +102,8 @@ let (create_leaf : freq -> tree) = function freq ->
 let (create_empty_tree : unit -> tree) = function() ->
   Ctree_vide;;
 
-(* ============================ *)
-
-(* getters sur les trees *)
+(* ====================== *)
+(* getters sur les arbres *)
 (* ====================== *)
 
 let (get_leaf : tree -> freq) = function Cleaf (f) ->
@@ -132,14 +126,15 @@ let (get_left_child : tree -> tree) = function Ctree (_, left_child, _) ->
 let (get_right_child : tree -> tree) = function Ctree (_, _, right_child) ->
   right_child | _ -> failwith "get_right_child : Please check again";;
 
-(* constructeurs et getters des lists d'abres *)
-(* =========================================== *)
+(* ============================================ *)
+(* constructeurs et getters des listes d'arbres *)
+(* ============================================ *)
 
 (* crée une liste d'arbre vide *)
 let (create_empty_trees_list : unit -> list_tree) = function () ->
   Clist_tree_vide;;
 
-(* test si notre list est vide *)
+(* test si notre liste est vide *)
 let (is_empty_tree : list_tree -> bool) = function list ->
   list = create_empty_trees_list();;
 
@@ -155,8 +150,7 @@ let (get_first_leaf : list_tree -> tree) = function Clist_tree(leaf, _) ->
 let (get_rest_list_tree : list_tree -> list_tree) = function Clist_tree(_, list) ->
   list | _ -> failwith "get_rest_list_tree : Please check again";;
 
-(* =========================================== *)
-
+(* ================================= *)
 (* Fonctions de manipulation de base *)
 (* ================================= *)
 
@@ -172,7 +166,7 @@ let rec (treat_element : string -> list -> list) = function letter -> function l
     else
       add_frequency (get_first_of_list list_freqs) (treat_element letter (get_rest_list list_freqs));;
 
-(* renvoie la liste des freqs d'une chain de caratère *)
+(* renvoie la liste des freqs d'une chaine de caratère *)
 let rec (list_freq : string -> list) = function freqchier ->
   if chain_is_empty freqchier then
     create_empty_list()
