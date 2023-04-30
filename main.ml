@@ -1,248 +1,320 @@
-open Printf;;
-open List;;
+(* =============================== *)
+(* La compression de fichiers avec *)
+(*     l’algorithme de HUFFMAN     *)
+(* =============================== *)
+
 open String;;
-(* Travail sur une lfreq de freqman *)
 
-(* Types *)
-(* ========================================================= *)
+(* ===================== *)
+(* Calcul des fréquences *)
+(* ===================== *)
 
-type tfreq = {car: string;
-              frequence: int};;
+(* défreqnition des types *)
+(* ==================== *)
 
-type tlfreqsfreq = Clfreq of tfreq * tlfreqsfreq | Clfreq_vide;;
+(* type freq *)
+type freq = Cfreq of string * int | Ccode of string * string;;
 
-type freqORint = | Int of int | Tfreq of tfreq | CfreqORint_vide;;
- 
+(* type list de freqs *)
+type list = Clist of freq * list | Clist_vide;;
 
-type tExpArithm = Cexp of freqORint * freqORint * freqORint | Cexp_vide;;
+(* type tree *)
+type tree = Ctree of int * tree * tree | Cleaf of freq | Ctree_vide;;
 
-(* constructeurs et sélecteurs *)
-(* =========================== *)
+(* type list de leafs *)
+type list_tree = Clist_tree of tree * list_tree | Clist_tree_vide;;
 
-let freqORint_vide = function () -> CfreqORint_vide;;
+(* ==================== *)
 
-let cree_lfreqVide = function () -> Clfreq_vide;;
+(* constructeur et getters de freq *)
+(* ================================ *)
 
-let add_freq = function freq -> function lfreq ->
-  Clfreq (freq, lfreq);;
+(* création d'un freq constitué d'un motif et de sa fréquence. *)
+let (create_freq : string -> int -> freq) = function motif -> function freq ->
+  Cfreq(motif,freq);;
 
-let est_vide_freq = function lfreq ->
-  lfreq = cree_lfreqVide ();; 
+(* création d'un freq constitué d'un caractère et de son code binaire. *)
+let (create_freq_code : string -> string -> freq ) = function caracter -> function bit ->
+  Ccode(caracter,bit);;
 
-let get_prem = function Clfreq (n, _) -> n |
-  _ -> failwith "get_prem : l'argument n'a pas la forme attendue";;
+(* renvoie le motif du freq *)
+let (get_motif : freq -> string) = function Cfreq(m,_) ->
+  m;;
 
-let get_reste = function Clfreq (_, reste) -> reste |
-  _ -> failwith "get_reste : l'argument n'a pas la forme attendue";;
+(* renvoie la fréquence du motif *)
+let (get_freq : freq -> int) = function Cfreq(_,f) ->
+  f;;
 
-(* unit -> tExpArithm - constructeur d'expression arithmétique vide *)
-let c_exp_vide = function () -> Cexp_vide;;
+let (get_caracter : freq -> string) = function Ccode(caracter, _) ->
+  caracter;;
 
-(* string -> tExpArithm -> tExpArithm -> tExpArithm
-construit une expression arithmétique à partir d'un noeud qui fera office de racine et de 2 expressions arithmétiques. *)
-let (cree_exp : freqORint -> freqORint -> freqORint -> tExpArithm) = function node -> function a1 -> function a2 -> Cexp (node, a1, a2);;
+let (get_bit : freq -> string) = function Ccode(_, bit) ->
+  bit;;
 
-(* string -> string 
-renvoie la premiere lettre d'une chaine de carateres *)
-let prem_lettre = function ch -> sub ch 0 1;;
+(* ================================ *)
 
-(* string -> string 
-renvoie la chaine de caracteres en parametre privee de sa premiere lettre *)
-let reste_lettre = function ch -> sub ch 1 ((length ch) - 1);;
+(* constructeurs et getters des lists *)
+(* =================================== *)
 
+(* crée une liste vide *)
+let (create_empty_list : unit -> list) = function () -> 
+  Clist_vide;;
 
-let est_vide = function ch ->(ch="");; 
+(* test si notre list est vide *)
+let (is_empty : list -> bool) = function list ->
+  list = create_empty_list();;
 
-(* ... de freq *)
-(* ************ *)
+(* ajoute un freq dans une liste *)
+let (add_frequency : freq -> list -> list) = function freq -> function list -> 
+  Clist(freq, list);;
 
-let cree_freq = function ch -> function freq -> {car = ch; frequence = freq};;
+(* renvoie la premiere frequence de la liste *)
+let (get_first_of_list : list -> freq) = function Clist(freq, _) -> 
+  freq | _ -> failwith "get_first_of_list : Please check again";;
 
-let freq_vide () = CfreqORint_vide;;
+(* renvoie la liste sans la premiere frequence *)
+let (get_rest_list : list -> list) = function Clist(_, list) -> 
+  list | _ -> failwith "get_rest_list : Please check again";;
 
-(* selecteurs d'une frequence *)
-let get_car = function freq -> freq.car;;
-let get_frequence = function freq -> freq.frequence;;
+(* =================================== *)
 
-(* let (cree_feuille : freqORint -> tExpArithm)  = function (node : freqORint) -> cree_exp node (freq_vide()) (freq_vide());; *)
-let (cree_feuille : freqORint -> tExpArithm) = function node ->
-  cree_exp node (freqORint_vide ()) (freqORint_vide ());;
+(* getters : chain de caractères *)
+(* ============================== *)
 
-let cfeuille = function freq -> cree_feuille (Tfreq freq);;
+(* test si une chain est vide *)
+let (chain_is_empty : string -> bool) = function ch ->
+  (ch = "");;
 
-let get_ssag = function Cexp (_, ag, _) -> ag;;
-let get_ssad = function Cexp (_, _, ad) -> ad;;
-let get_r = function Cexp (r, _, _) -> r;;
+(* renvoie la premotifère letter d'une chain de caractères *)
+let (chain_freqrst : string -> string) = function ch ->
+  sub ch 0 1;;
 
+(* renvoie la chain de caractère passée en paramètre privée de sa premotifère letter *)
+let (chain_rest : string -> string) = function ch ->
+  sub ch 1 ((length ch) - 1);;
 
-let test = "BCABCDCECEBCEECECCCABCECBDBDBDB";;
+(* ============================== *)
 
-let rec getLastLettre = function chaine ->
-  if est_vide chaine then ""
-  else if (length chaine) = 1  then prem_lettre chaine
-  else 
-    getLastLettre (reste_lettre chaine);;
+(* constructeurs sur les trees *)
+(* ============================ *)
 
-let rec est_dans = function code -> function car ->
-  if est_vide code then false 
-  else let prem = prem_lettre code
-    and reste = reste_lettre code
-    in if car = prem then true
-    else est_dans reste car;;
+let (create_tree : int -> tree -> tree -> tree) = function racine -> function left_child -> function right_child ->
+  Ctree(racine, left_child, right_child);;
+        
+let (create_leaf : freq -> tree) = function freq ->
+  Cleaf(freq);;
 
-let rec recup_lettres = function code -> function car ->
-  if est_vide code then car
-  else let prem = prem_lettre code
-    and reste = reste_lettre code
-    in if est_dans car prem then (recup_lettres reste car)
-    else recup_lettres reste (car ^ prem);; 
+let (create_empty_tree : unit -> tree) = function() ->
+  Ctree_vide;;
 
-let test2 = recup_lettres test "";;
-(* val test2 : string = "BCADE" *)
+(* ============================ *)
 
-let rec nb_occurences = function code -> function car -> function cptr -> 
-  if est_vide code then cptr
-  else let prem = prem_lettre code
-    and res = reste_lettre code 
-    in if prem = car then nb_occurences res car (cptr+1)
-    else nb_occurences res car cptr;;
+(* getters sur les trees *)
+(* ====================== *)
 
-let nboccur = nb_occurences test "A" 0;;
-(* let nboccur = nb_occurences test "A" 0;; *) 
+let (get_leaf : tree -> freq) = function Cleaf (f) ->
+  f | _ -> failwith "get_leaf : Please check again";;
 
-let meme_motif = function x -> function y ->
-  if x = y then true else false;;
+(* fonction qui teste si l'élément est une feuille*)
+let (is_leaf : tree -> bool) = function Cleaf(_) ->
+  true | _ -> false;;
 
-let rec majfreq = function x ->
-  let prem = get_car x
-  and freq = get_frequence x in cree_freq prem (freq+1);;
+(* ajoute un arbre dans une liste d'arbre *)
+let (add_tree : tree -> list_tree -> list_tree ) = function tree -> function list ->
+  Clist_tree(tree, list);;
 
-let rec (mise_a_jour : string -> tlfreqsfreq -> tlfreqsfreq) =
-  function motif -> function lfreq ->
-    if est_vide_freq lfreq 
-    then add_freq (cree_freq motif 1) (cree_lfreqVide())
+let (get_root : tree -> int) = function Ctree (r, _, _) -> 
+  r | _ -> failwith "get_root : Please check again";;
+
+let (get_left_child : tree -> tree) = function Ctree (_, left_child, _) -> 
+  left_child | _ -> failwith "get_left_child : Please check again";;
+
+let (get_right_child : tree -> tree) = function Ctree (_, _, right_child) ->
+  right_child | _ -> failwith "get_right_child : Please check again";;
+
+(* constructeurs et getters des lists d'abres *)
+(* =========================================== *)
+
+(* crée une liste d'arbre vide *)
+let (create_empty_trees_list : unit -> list_tree) = function () ->
+  Clist_tree_vide;;
+
+(* test si notre list est vide *)
+let (is_empty_tree : list_tree -> bool) = function list ->
+  list = create_empty_trees_list();;
+
+(* ajoute une feuille dans une liste *)
+let (add_tree : tree -> list_tree -> list_tree) = function leaf -> function list_tree ->
+  Clist_tree(leaf, list_tree);;
+
+(* renvoie la premiere leaf de la liste *)
+let (get_first_leaf : list_tree -> tree) = function Clist_tree(leaf, _) ->
+  leaf | _ -> failwith "get_first_leaf : Please check again";;
+
+(* renvoie la liste sans la premiere frequence *)
+let (get_rest_list_tree : list_tree -> list_tree) = function Clist_tree(_, list) ->
+  list | _ -> failwith "get_rest_list_tree : Please check again";;
+
+(* =========================================== *)
+
+(* Fonctions de manipulation de base *)
+(* ================================= *)
+
+(* renvoie ma list avec le freq correspondant a la letter motifs à jour  *)
+let rec (treat_element : string -> list -> list) = function letter -> function list_freqs ->
+  if is_empty list_freqs then
+    add_frequency (create_freq letter 1) list_freqs
+  else
+    if get_motif(get_first_of_list list_freqs) = letter then
+      add_frequency (create_freq letter (get_freq (get_first_of_list list_freqs)+1)) (get_rest_list list_freqs)
+    else if is_empty (get_rest_list list_freqs) then
+      add_frequency (create_freq letter 1) list_freqs
     else
-      let prem = get_prem lfreq
-      and reste = get_reste lfreq
-      in if (meme_motif motif (get_car prem))
-      then let new_elt = majfreq prem
-        in add_freq new_elt reste
-      else
-        add_freq prem (mise_a_jour motif reste);;
+      add_frequency (get_first_of_list list_freqs) (treat_element letter (get_rest_list list_freqs));;
 
-let rec (calc_freq : string -> tlfreqsfreq) = function doc ->
-  if est_vide doc then cree_lfreqVide()
-  else mise_a_jour (prem_lettre doc) (calc_freq (reste_lettre doc));;
-  
-(* --------------------------------------- *)
-  
-(* Define a test string *)
-let test = "BCABCDCECEBCEECECCCABCECBDBDBDB";;
-
-(* Define a function that takes two integers and returns the maximum *)
-let minnbr = fun nbr1 -> fun nbr2 ->
-  if nbr1 > nbr2 then
-    nbr2
+(* renvoie la liste des freqs d'une chain de caratère *)
+let rec (list_freq : string -> list) = function freqchier ->
+  if chain_is_empty freqchier then
+    create_empty_list()
   else
-    nbr1;;
+    treat_element (chain_freqrst freqchier) (list_freq (chain_rest freqchier ));;
 
-(* Define a function that takes two frequency records and returns the one with the highest frequency *)
-let returnFilsGauche = fun freq1 -> fun freq2 ->
-  let frequance1 = get_frequence freq1 and frequance2 = get_frequence freq2 in
-  if (minnbr frequance1 frequance2) == frequance1 then
-    freq1
+(* test : *)
+let list = list_freq "BCABCDCECEBCEECECCCABCECBDBDBDB";;
+
+(* fonction qui insert un freq dans une liste *)
+let rec (insert_frequency : freq -> list -> list) = function freq -> function list_freqs ->
+  add_frequency freq list_freqs;;
+
+(* fonction qui converti une listes de freq en list d'arbres *)
+let rec (freq_to_tree : list -> list_tree) = function list ->
+  if is_empty list then
+    create_empty_trees_list()
   else
-    freq2;;
+    let freq = get_first_of_list list
+    and rest = get_rest_list list in
+    let leaf = create_leaf freq in
+    add_tree leaf (freq_to_tree rest);;
 
-let freqTest = cree_freq "y" 23;;
-let listTest = add_freq freqTest Clfreq_vide;;
+let list_tree = freq_to_tree list;;
 
-listTest;;
-(*- : tlfreqsfreq = Clfreq ({car = "y"; frequence = 23}, Clfreq_vide) *)
-
-let (oneElt:tlfreqsfreq -> tfreq) = function lfreq ->
-  let reste = get_reste lfreq
-  and prem = get_prem lfreq
-  in if reste = Clfreq_vide
-  then prem
-  else failwith "there's more than one element";;
-
-let (oneElt2:tlfreqsfreq -> bool) = function lfreq ->
-  let reste = get_reste lfreq 
-  in if reste = Clfreq_vide
-  then true
-  else false;; 
-
-let rec (plusPetit: tlfreqsfreq -> tfreq) = function lfreq ->
-  let prem = get_prem lfreq and reste = get_reste lfreq 
-  in if oneElt2 lfreq then
-    oneElt lfreq
-  else if (oneElt2 lfreq) = false then
-    returnFilsGauche prem (plusPetit reste)
+let (get_frequence : tree -> int) = function elem ->
+  if (is_leaf elem) then
+    (get_freq (get_leaf elem))
   else
-    plusPetit reste ;;
+    get_root elem;;
 
-let rec (remove_smallest:tlfreqsfreq -> tlfreqsfreq) = function lst ->
-  if oneElt2 lst 
-  then Clfreq_vide
-  else let smallest = plusPetit lst and hd = get_prem lst and tl = get_reste lst
-    in if hd = smallest 
-    then tl 
-    else add_freq hd (remove_smallest tl);; 
+(* fonction qui insert une feuille dans une liste d'arbre *)
+let rec (insert_leaf : tree -> list_tree -> list_tree) = function leaf -> function list_leafs ->
+  if is_empty_tree list_leafs then
+    add_tree leaf list_leafs
+  else
+    let leaf_courant = get_first_leaf list_leafs in
+    if (get_frequence leaf) <= (get_frequence leaf_courant) then
+      add_tree leaf list_leafs
+    else
+      add_tree leaf_courant (insert_leaf leaf (get_rest_list_tree list_leafs));;
 
-let (add_plus_petit: tlfreqsfreq -> int) = function lfreq ->
-  let freq1 = get_frequence (plusPetit lfreq) and reste = remove_smallest lfreq
-  in let freq2 = get_frequence (plusPetit reste) in
-  freq1 + freq2;; 
-
-let (pre_arbre:tlfreqsfreq -> tExpArithm) = function lfreq ->
-  let main = add_plus_petit lfreq
-  and left = plusPetit lfreq
-  and right = plusPetit (remove_smallest lfreq)
-  in cree_exp (Int main) (Tfreq left) (Tfreq right);;
+(* fonction qui prend une liste d'arbre et la renvoie trié dans l'ordre croissant *)
+let rec (sort_list : list_tree -> list_tree) = function list_trees ->
+  if is_empty_tree list_trees then
+    create_empty_trees_list()
+  else
+    let leaf = get_first_leaf list_trees in
+    let rest = get_rest_list_tree list_trees in
+    let list_triee = sort_list rest in
+    insert_leaf leaf list_triee;;
 
 (*
-  let rec (arbre:tlfreqsfreq -> tExpArithm) = function lfreq ->
-    let main = add_plus_petit lfreq
-    and left = plusPetit lfreq
-    and right = plusPetit (remove_smallest lfreq)
-    in if 
-    then cree_exp (Int main) (Tfreq left) (Tfreq right);; *)
-
-  
-
-(* --------------------------------------- *)
-  
-
-(*  Tests  *)
-let test = "BCABCDCECEBCEECECCCABCECBDBDBDB";;
-let test2 = recup_lettres test "";;
-
-let newlist = cree_lfreqVide ();;
-let nboccur = nb_occurences test "A" 0;;
-(* let nboccur = nb_occurences test "A" 0;; *)
-let test3 = calc_freq test;;
-(* - : tlfreqsfreq =
-Clfreq ({car = "B"; frequence = 8},
- Clfreq ({car = "D"; frequence = 4},
-  Clfreq ({car = "C"; frequence = 11},
-   Clfreq ({car = "E"; frequence = 6},
-    Clfreq ({car = "A"; frequence = 2}, Clfreq_vide))))) *) 
-
-
-oneElt2 listTest;;
-let exp1 = cree_freq "4" 1;;
-let exp2 = cree_freq "Y" 0;;
-let add= add_freq (exp1) test3;;
-let bdd =add_freq (exp2) add;;
-plusPetit bdd;;
-remove_smallest test3;;
-add_plus_petit test3;;
-cree_exp (Int 1) (Int 2) (Int 3);;
-cree_exp (Tfreq exp1) (Tfreq exp2) (Tfreq exp2);;
-pre_arbre test3;;
-(* 
-- : tExpArithm =
-Cexp (Int 6, Tfreq {car = "A"; frequence = 2},
- Tfreq {car = "D"; frequence = 4}) 
+let list_tree_trie = sort_list list_tree;;
 *)
+
+(* function qui affiche une listee d'arbre pour avoir un meilleur visuel *)
+let rec (browse : list_tree -> string) = function list ->
+  if is_empty_tree list then
+    ""
+  else
+    let leaf = get_leaf(get_first_leaf list)
+    and rest = get_rest_list_tree list in
+    "("^(get_motif leaf)^", "^(string_of_int (get_freq leaf))^") "^browse rest;;
+
+(*
+browse list_tree;;
+browse list_tree_trie;;
+ *)
+
+(* fonction qui insert un arbre dans une liste d'arbre *)
+let rec (insert_tree : tree -> list_tree -> list_tree) = function tree -> function list_tree ->
+  add_tree tree list_tree;;
+
+let (form_tree : list_tree -> list_tree) = function list ->
+  if is_empty_tree list then
+    create_empty_trees_list()
+  else if is_empty_tree (get_rest_list_tree list) then
+    insert_tree (get_first_leaf list) list
+  else
+    let leaf1 = (get_first_leaf list)
+    and leaf2 = (get_first_leaf (get_rest_list_tree list)) in
+    
+    let tree = (create_tree ((get_frequence leaf1) + (get_frequence leaf2)) leaf1 leaf2)
+    and rest = get_rest_list_tree (get_rest_list_tree list) in
+    insert_tree tree rest;;
+
+(* fonction qui prend une liste d'abre et crée l'tree freqnal *)
+let rec (principal_tree : list_tree -> tree) = function list ->
+  let list = sort_list list in
+  if (is_empty_tree (get_rest_list_tree list)) then
+    get_first_leaf list
+  else
+    principal_tree (sort_list (form_tree list));;
+
+let tree = principal_tree list_tree;;
+
+let rec (concatinate_list : list -> list -> list ) = function list1 -> function list2 ->
+  if is_empty list1 then
+    list2
+  else
+    add_frequency (get_first_of_list list1) (concatinate_list (get_rest_list list1) list2);;
+
+let rec (tree_to_binary : tree -> string -> list ) = function tree -> function bit ->
+  if is_leaf tree then
+    add_frequency (create_freq_code (get_motif (get_leaf tree)) bit) (create_empty_list())
+  else
+    concatinate_list (tree_to_binary (get_left_child tree) (bit ^ "1"))
+    (tree_to_binary (get_right_child tree) (bit ^ "0"));;
+
+(* tree_to_binary tree "";;*)
+
+let (code : string -> list ) = function chain ->
+  tree_to_binary (principal_tree(freq_to_tree (list_freq chain))) "";;
+
+(*
+code "BCABCDCECEBCEECECCCABCECBDBDBDB";;
+*)
+
+(* Fonction qui trouve la convertion binaire pour un caractère donné *)
+(* list -> char -> string *)
+let rec (caracter_to_binary : list -> string -> string ) = function list -> function caracter ->
+  if (get_caracter (get_first_of_list list)) = caracter then
+    get_bit (get_first_of_list list)
+  else
+    caracter_to_binary (get_rest_list list) caracter;;
+
+(*
+caracter_to_binary (code "BCABCDCECEBCEECECCCABCECBDBDBDB") "C";;
+*)
+
+let rec (code_to_binary : list -> string -> string ) = function list -> function chain ->
+  if chain_is_empty chain then
+    ""
+  else
+    (caracter_to_binary list (chain_freqrst chain)) ^ " " ^ (code_to_binary list (chain_rest chain));;
+(*
+code_to_binary (code "BCABCDCECEBCEECECCCABCECBDBDBDB") "BCABCDCECEBCEECECCCABCECBDBDBDB";;
+*)
+                                                     
+let (huffman : string -> string ) = function chain ->
+  let list_code = code chain in
+  code_to_binary list_code chain;;                                
+
+huffman "BCABCDCECEBCEECECCCABCECBDBDBDB";;
