@@ -11,12 +11,15 @@ type tfreq = {car: string;
 
 type tlfreqsfreq = Clfreq of tfreq * tlfreqsfreq | Clfreq_vide;;
 
-type freqORint = Int of int | Tfreq of tfreq | CfreqORint_vide;; 
+type freqORint = | Int of int | Tfreq of tfreq | CfreqORint_vide;;
+ 
 
-type tExpArithm = Cexp of freqORint * freqORint * freqORint | Cexp_vide;; 
+type tExpArithm = Cexp of freqORint * freqORint * freqORint | Cexp_vide;;
 
 (* constructeurs et sélecteurs *)
 (* =========================== *)
+
+let freqORint_vide = function () -> CfreqORint_vide;;
 
 let cree_lfreqVide = function () -> Clfreq_vide;;
 
@@ -62,7 +65,10 @@ let get_car = function freq -> freq.car;;
 let get_frequence = function freq -> freq.frequence;;
 
 (* let (cree_feuille : freqORint -> tExpArithm)  = function (node : freqORint) -> cree_exp node (freq_vide()) (freq_vide());; *)
-let cree_feuille node = cree_exp (Tfreq node) (freq_vide ()) (freq_vide ());;
+let (cree_feuille : freqORint -> tExpArithm) = function node ->
+  cree_exp node (freqORint_vide ()) (freqORint_vide ());;
+
+let cfeuille = function freq -> cree_feuille (Tfreq freq);;
 
 let get_ssag = function Cexp (_, ag, _) -> ag;;
 let get_ssad = function Cexp (_, _, ad) -> ad;;
@@ -102,17 +108,7 @@ let rec nb_occurences = function code -> function car -> function cptr ->
     else nb_occurences res car cptr;;
 
 let nboccur = nb_occurences test "A" 0;;
-(* let nboccur = nb_occurences test "A" 0;; *)
-
-let rec calc_freq_v1 = function chaine -> function lettreChaine ->
-  if est_vide chaine  then ""
-  else let reste = reste_lettre chaine
-    in if (length lettreChaine) =0  then ""
-    else let charac =  prem_lettre lettreChaine
-      in "" ^ charac ^" " ^ string_of_int((nb_occurences chaine (charac) 0)) ^" "^ calc_freq_v1 reste (reste_lettre lettreChaine);;
-
-let resTest = calc_freq_v1 test test2 ;;
-(* val resTest : string = "B 8 C 11 A 2 D 4 E 6 " *)
+(* let nboccur = nb_occurences test "A" 0;; *) 
 
 let meme_motif = function x -> function y ->
   if x = y then true else false;;
@@ -199,6 +195,22 @@ let (add_plus_petit: tlfreqsfreq -> int) = function lfreq ->
   in let freq2 = get_frequence (plusPetit reste) in
   freq1 + freq2;; 
 
+let (pre_arbre:tlfreqsfreq -> tExpArithm) = function lfreq ->
+  let main = add_plus_petit lfreq
+  and left = plusPetit lfreq
+  and right = plusPetit (remove_smallest lfreq)
+  in cree_exp (Int main) (Tfreq left) (Tfreq right);;
+
+(*
+  let rec (arbre:tlfreqsfreq -> tExpArithm) = function lfreq ->
+    let main = add_plus_petit lfreq
+    and left = plusPetit lfreq
+    and right = plusPetit (remove_smallest lfreq)
+    in if 
+    then cree_exp (Int main) (Tfreq left) (Tfreq right);; *)
+
+  
+
 (* --------------------------------------- *)
   
 
@@ -219,8 +231,18 @@ Clfreq ({car = "B"; frequence = 8},
 
 
 oneElt2 listTest;;
-let add= add_freq (cree_freq "4" 1) test3;;
-let bdd =add_freq (cree_freq "Y" 0) add;;
+let exp1 = cree_freq "4" 1;;
+let exp2 = cree_freq "Y" 0;;
+let add= add_freq (exp1) test3;;
+let bdd =add_freq (exp2) add;;
 plusPetit bdd;;
 remove_smallest test3;;
 add_plus_petit test3;;
+cree_exp (Int 1) (Int 2) (Int 3);;
+cree_exp (Tfreq exp1) (Tfreq exp2) (Tfreq exp2);;
+pre_arbre test3;;
+(* 
+- : tExpArithm =
+Cexp (Int 6, Tfreq {car = "A"; frequence = 2},
+ Tfreq {car = "D"; frequence = 4}) 
+*)
